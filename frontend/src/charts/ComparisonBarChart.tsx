@@ -6,15 +6,13 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import type { CompareCareer } from '../types';
+import { CHART, tooltipStyle } from '../lib/chartTheme';
 
 interface Props {
   careers: CompareCareer[];
 }
-
-const COLORS = ['#818cf8', '#34d399', '#f472b6'];
 
 export default function ComparisonBarChart({ careers }: Props) {
   const metrics = ['avg_earnings_projection', 'stability_score', 'ai_resistance', 'growth', 'flexibility', 'remote_opportunity'];
@@ -22,7 +20,7 @@ export default function ComparisonBarChart({ careers }: Props) {
     avg_earnings_projection: 'Earnings',
     stability_score: 'Stability',
     ai_resistance: 'AI Resistance',
-    growth: 'Growth %',
+    growth: 'Growth',
     flexibility: 'Flexibility',
     remote_opportunity: 'Remote',
   };
@@ -36,27 +34,14 @@ export default function ComparisonBarChart({ careers }: Props) {
   });
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-        <XAxis dataKey="metric" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
-        <Tooltip
-          contentStyle={{
-            background: 'rgba(15,23,42,0.95)',
-            border: '1px solid rgba(148,163,184,0.2)',
-            borderRadius: '12px',
-            color: '#e2e8f0',
-          }}
-        />
-        <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+    <ResponsiveContainer width="100%" height={320}>
+      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+        <XAxis dataKey="metric" tick={{ fill: CHART.axis, fontSize: 10 }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fill: CHART.axis, fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+        <Tooltip contentStyle={tooltipStyle} />
         {careers.map((c, i) => (
-          <Bar
-            key={c.id}
-            dataKey={c.name}
-            fill={COLORS[i % COLORS.length]}
-            radius={[4, 4, 0, 0]}
-          />
+          <Bar key={c.id} dataKey={c.name} fill={CHART.series[i % CHART.series.length]} radius={[3, 3, 0, 0]} />
         ))}
       </BarChart>
     </ResponsiveContainer>

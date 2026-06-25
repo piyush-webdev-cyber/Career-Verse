@@ -6,9 +6,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import type { AIDisruptionTimeline } from '../types';
+import { CHART, tooltipStyle } from '../lib/chartTheme';
 
 interface Props {
   data: AIDisruptionTimeline[];
@@ -16,43 +16,40 @@ interface Props {
 
 export default function AITimelineChart({ data }: Props) {
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-        <XAxis dataKey="year" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+    <ResponsiveContainer width="100%" height={260}>
+      <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+        <XAxis dataKey="year" tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis
-          tick={{ fill: '#94a3b8', fontSize: 11 }}
+          tick={{ fill: CHART.axis, fontSize: 11 }}
           tickFormatter={(v) => `${v}%`}
           domain={[0, 100]}
+          axisLine={false}
+          tickLine={false}
+          width={36}
         />
         <Tooltip
-          contentStyle={{
-            background: 'rgba(15,23,42,0.95)',
-            border: '1px solid rgba(148,163,184,0.2)',
-            borderRadius: '12px',
-            color: '#e2e8f0',
-          }}
+          contentStyle={tooltipStyle}
           formatter={(value: number, name: string) => [
             `${value}%`,
-            name === 'automation_pct' ? 'Tasks Automated' : 'AI Exposure Risk',
+            name === 'automation_pct' ? 'Tasks automated' : 'AI exposure',
           ]}
         />
-        <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
         <Line
           type="monotone"
           dataKey="automation_pct"
-          stroke="#f59e0b"
+          stroke={CHART.warning}
           strokeWidth={2}
-          dot={{ fill: '#f59e0b', r: 5 }}
-          name="Tasks Automated"
+          dot={{ fill: CHART.warning, r: 3, strokeWidth: 0 }}
+          name="automation_pct"
         />
         <Line
           type="monotone"
           dataKey="exposure_risk"
-          stroke="#ef4444"
+          stroke={CHART.danger}
           strokeWidth={2}
-          dot={{ fill: '#ef4444', r: 5 }}
-          name="AI Exposure Risk"
+          dot={{ fill: CHART.danger, r: 3, strokeWidth: 0 }}
+          name="exposure_risk"
         />
       </LineChart>
     </ResponsiveContainer>

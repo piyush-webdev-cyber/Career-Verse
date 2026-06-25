@@ -1,11 +1,26 @@
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { User, FileText, BarChart3, Brain } from 'lucide-react';
+import {
+  FileText,
+  BarChart3,
+  Target,
+  User,
+  ArrowRight,
+  Clock,
+  Sparkles,
+  Activity,
+} from 'lucide-react';
 import { getDashboard } from '../services/api';
 import { useApp } from '../context/AppContext';
-import CareerCard from '../components/CareerCard';
-import LoadingSpinner from '../components/LoadingSpinner';
-import StatCard from '../components/StatCard';
+import { MatchResultCard } from '../components/AssessmentPanel';
+import PageHeader, { Section } from '../components/ui/PageHeader';
+import Card, { CardHeader } from '../components/ui/Card';
+import KpiCard from '../components/ui/KpiCard';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import EmptyState, { LoadingState } from '../components/ui/EmptyState';
+import Progress from '../components/ui/Progress';
 
 export default function DashboardPage() {
   const { userId, matches } = useApp();
@@ -17,137 +32,185 @@ export default function DashboardPage() {
 
   const displayMatches = matches.length > 0 ? matches : (data?.career_matches ?? []);
 
-  if (isLoading) return <LoadingSpinner text="Loading dashboard..." />;
+  if (isLoading) return <LoadingState text="Loading dashboard..." />;
 
   if (error) {
     return (
-      <div className="glass-card p-6 border-red-500/30 text-red-400">
-        Failed to load dashboard. Ensure the backend is running.
-      </div>
+      <Card className="border-danger/30 bg-danger/5">
+        <p className="text-sm text-danger">Failed to load dashboard. Ensure the backend is running.</p>
+      </Card>
     );
   }
 
+  const latestSim = data?.simulations[0];
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-white mb-2">
-          Your Dashboard
-        </h1>
-        <p className="text-slate-400">
-          Overview of your career analysis, simulations, and saved reports.
-        </p>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Your career intelligence workspace — matches, simulations, and insights."
+        action={
+          <Link to="/questionnaire">
+            <Button variant="secondary" size="sm">
+              New assessment
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        }
+      />
 
-      <div className="grid sm:grid-cols-3 gap-4">
-        <StatCard
-          label="Saved Reports"
-          value={String(data?.saved_reports_count ?? 0)}
-          icon={FileText}
-          color="text-indigo-400"
-        />
-        <StatCard
-          label="Career Matches"
-          value={String(displayMatches.length)}
-          icon={Brain}
-          color="text-emerald-400"
-        />
-        <StatCard
-          label="Simulations Run"
-          value={String(data?.simulations.length ?? 0)}
-          icon={BarChart3}
-          color="text-amber-400"
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard label="Saved reports" value={String(data?.saved_reports_count ?? 0)} icon={FileText} layout="horizontal" />
+        <KpiCard label="Career matches" value={String(displayMatches.length)} icon={Target} layout="horizontal" />
+        <KpiCard label="Simulations" value={String(data?.simulations.length ?? 0)} icon={BarChart3} layout="horizontal" />
+        <KpiCard
+          label="Latest stability"
+          value={latestSim ? `${latestSim.stability_score.toFixed(0)}` : '—'}
+          icon={Activity}
+          layout="horizontal"
+          change={latestSim?.career_name}
         />
       </div>
 
-      <section className="glass-card p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <User className="w-5 h-5 text-indigo-400" />
-          <h2 className="font-display text-lg font-semibold text-white">Profile</h2>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-slate-500">Name</span>
-            <p className="text-white font-medium">{data?.user.name}</p>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card variant="analytics" className="lg:col-span-2">
+          <CardHeader
+            title="Profile"
+            action={<User className="w-4 h-4 text-secondary" strokeWidth={1.75} />}
+          />
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div>
+              <p className="text-2xs text-muted uppercase tracking-wider mb-1">Name</p>
+              <p className="text-sm font-medium text-foreground">{data?.user.name}</p>
+            </div>
+            <div>
+              <p className="text-2xs text-muted uppercase tracking-wider mb-1">Email</p>
+              <p className="text-sm font-medium text-foreground">{data?.user.email}</p>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-500">Email</span>
-            <p className="text-white font-medium">{data?.user.email}</p>
-          </div>
-        </div>
-      </section>
+          {displayMatches.length === 0 && (
+            <div className="mt-6 pt-6 border-t border-line">
+              <p className="text-xs text-muted mb-3">No assessment completed yet.</p>
+              <Link to="/questionnaire">
+                <Button size="sm">Start assessment</Button>
+              </Link>
+            </div>
+          )}
+        </Card>
 
-      <section>
-        <h2 className="font-display text-lg font-semibold text-white mb-4">
-          Career Matches
-        </h2>
+        <Card variant="analytics">
+          <CardHeader title="AI recommendations" />
+          {displayMatches.length > 0 ? (
+            <div className="space-y-3">
+              {displayMatches.slice(0, 3).map((m, i) => (
+                <div key={m.career_name} className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{m.career_name}</p>
+                    <Progress value={m.match_percentage} size="sm" className="mt-1.5" />
+                  </div>
+                  <Badge variant={i === 0 ? 'accent' : 'default'}>{m.match_percentage}%</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted">Complete the assessment to see recommendations.</p>
+          )}
+        </Card>
+      </div>
+
+      <Section title="Career matches" description="Ranked by compatibility">
         {displayMatches.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {displayMatches.map((match, i) => (
-              <CareerCard key={match.career_name} match={match} rank={i + 1} />
+              <MatchResultCard
+                key={match.career_name}
+                rank={i + 1}
+                name={match.career_name}
+                match={match.match_percentage}
+                reasoning={match.reasoning}
+                salary={match.avg_starting_salary}
+                education={match.education_years}
+              />
             ))}
           </div>
         ) : (
-          <div className="glass-card p-8 text-center text-slate-400">
-            No career matches yet. Complete the assessment to get recommendations.
-          </div>
+          <EmptyState
+            title="No matches yet"
+            description="Complete the career assessment to discover your top paths."
+            action={
+              <Link to="/questionnaire">
+                <Button size="sm">Take assessment</Button>
+              </Link>
+            }
+          />
         )}
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="font-display text-lg font-semibold text-white mb-4">
-          Simulation Results
-        </h2>
+      <Section title="Recent simulations" description="Monte Carlo run history">
         {data?.simulations && data.simulations.length > 0 ? (
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-3">
             {data.simulations.map((sim, i) => (
               <motion.div
                 key={sim.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="glass-card p-5"
+                transition={{ delay: i * 0.04 }}
               >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold text-white">{sim.career_name}</h3>
-                  <span className="text-xs text-slate-500">
-                    {new Date(sim.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-slate-500">Avg Salary</span>
-                    <p className="text-white font-medium">₹{sim.average_salary.toFixed(1)}L</p>
+                <Card hover padding="sm">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{sim.career_name}</h3>
+                      <p className="text-2xs text-secondary flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {new Date(sim.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant="success">{sim.stability_score.toFixed(0)} stable</Badge>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Stability</span>
-                    <p className="text-white font-medium">{sim.stability_score}/100</p>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
+                      <p className="text-2xs text-muted">Avg</p>
+                      <p className="text-sm font-semibold tabular-nums">₹{sim.average_salary.toFixed(0)}L</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
+                      <p className="text-2xs text-muted">Best</p>
+                      <p className="text-sm font-semibold text-success tabular-nums">₹{sim.best_case.toFixed(0)}L</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03]">
+                      <p className="text-2xs text-muted">Worst</p>
+                      <p className="text-sm font-semibold text-danger tabular-nums">₹{sim.worst_case.toFixed(0)}L</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Best Case</span>
-                    <p className="text-emerald-400 font-medium">₹{sim.best_case.toFixed(1)}L</p>
+                  <div className="flex gap-4 mt-3 pt-3 border-t border-line text-2xs text-muted">
+                    <span>P(&gt;₹20L): <strong className="text-foreground">{sim.probability_20L.toFixed(0)}%</strong></span>
+                    <span>P(&gt;₹50L): <strong className="text-foreground">{sim.probability_50L.toFixed(0)}%</strong></span>
                   </div>
-                  <div>
-                    <span className="text-slate-500">Worst Case</span>
-                    <p className="text-red-400 font-medium">₹{sim.worst_case.toFixed(1)}L</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">P(&gt;₹20L)</span>
-                    <p className="text-indigo-300 font-medium">{sim.probability_20L.toFixed(1)}%</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">P(&gt;₹50L)</span>
-                    <p className="text-indigo-300 font-medium">{sim.probability_50L.toFixed(1)}%</p>
-                  </div>
-                </div>
+                </Card>
               </motion.div>
             ))}
           </div>
         ) : (
-          <div className="glass-card p-8 text-center text-slate-400">
-            No simulations yet. Run the Monte Carlo simulator to see results here.
-          </div>
+          <EmptyState
+            title="No simulations yet"
+            description="Run the Monte Carlo simulator to see probabilistic outcomes here."
+            action={
+              <Link to="/simulator">
+                <Button size="sm">Open simulator</Button>
+              </Link>
+            }
+          />
         )}
-      </section>
+      </Section>
+
+      <Card variant="ghost" padding="sm" className="flex items-center gap-3">
+        <Sparkles className="w-4 h-4 text-accent flex-shrink-0" strokeWidth={1.75} />
+        <p className="text-xs text-muted flex-1">
+          Career insights update automatically as you complete assessments and run simulations.
+        </p>
+        <Link to="/parallel">
+          <Button variant="ghost" size="sm">Compare paths</Button>
+        </Link>
+      </Card>
     </div>
   );
 }

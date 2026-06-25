@@ -1,38 +1,55 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
+import {
+  Code2,
+  Calculator,
+  Dna,
+  Briefcase,
+  Palette,
+  Dice5,
+  Scale,
+  Home,
+  Users,
+  GraduationCap,
+  ArrowRight,
+  RotateCcw,
+} from 'lucide-react';
 import { recommendCareers } from '../services/api';
 import { useCareers } from '../hooks/useCareers';
 import { useApp } from '../context/AppContext';
-import CareerCard from '../components/CareerCard';
-import LoadingSpinner from '../components/LoadingSpinner';
+import AssessmentSidebar, { QuestionSlider, MatchResultCard } from '../components/AssessmentPanel';
+import PageHeader from '../components/ui/PageHeader';
+import Card, { CardHeader } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import { LoadingState } from '../components/ui/EmptyState';
 import type { QuestionnaireData } from '../types';
 
 const QUESTIONS = [
-  { key: 'interest_coding', label: 'Interest in Coding', icon: '💻' },
-  { key: 'interest_math', label: 'Interest in Mathematics', icon: '📐' },
-  { key: 'interest_biology', label: 'Interest in Biology', icon: '🧬' },
-  { key: 'interest_business', label: 'Interest in Business', icon: '📊' },
-  { key: 'interest_creativity', label: 'Interest in Creativity', icon: '🎨' },
-  { key: 'risk_tolerance', label: 'Risk Tolerance', icon: '🎲' },
-  { key: 'work_life_balance', label: 'Desired Work-Life Balance', icon: '⚖️' },
-  { key: 'remote_preference', label: 'Preference for Remote Work', icon: '🏠' },
-  { key: 'leadership_interest', label: 'Leadership Interest', icon: '👥' },
+  { key: 'interest_coding', label: 'Interest in coding', icon: Code2 },
+  { key: 'interest_math', label: 'Interest in mathematics', icon: Calculator },
+  { key: 'interest_biology', label: 'Interest in biology', icon: Dna },
+  { key: 'interest_business', label: 'Interest in business', icon: Briefcase },
+  { key: 'interest_creativity', label: 'Interest in creativity', icon: Palette },
+  { key: 'risk_tolerance', label: 'Risk tolerance', icon: Dice5 },
+  { key: 'work_life_balance', label: 'Work-life balance priority', icon: Scale },
+  { key: 'remote_preference', label: 'Remote work preference', icon: Home },
+  { key: 'leadership_interest', label: 'Leadership interest', icon: Users },
 ] as const;
 
 const DEFAULT: QuestionnaireData = {
   name: 'Demo User',
   email: 'demo@careerverse.ai',
-  interest_coding: 5,
-  interest_math: 5,
-  interest_biology: 5,
-  interest_business: 5,
-  interest_creativity: 5,
-  risk_tolerance: 5,
-  work_life_balance: 5,
-  remote_preference: 5,
-  leadership_interest: 5,
+  interest_coding: 0,
+  interest_math: 0,
+  interest_biology: 0,
+  interest_business: 0,
+  interest_creativity: 0,
+  risk_tolerance: 0,
+  work_life_balance: 0,
+  remote_preference: 0,
+  leadership_interest: 0,
   years_to_study: 4,
 };
 
@@ -50,6 +67,15 @@ export default function QuestionnairePage() {
     },
   });
 
+  const progress = useMemo(() => {
+    const fields = [...QUESTIONS.map((q) => q.key), 'years_to_study'] as const;
+    const filled = fields.filter((k) => {
+      const v = form[k as keyof QuestionnaireData];
+      return typeof v === 'number' && v > 0;
+    }).length;
+    return (filled / fields.length) * 100;
+  }, [form]);
+
   const updateField = (key: string, value: number) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -60,118 +86,97 @@ export default function QuestionnairePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h1 className="font-display text-3xl font-bold text-white mb-2">
-          Career Assessment
-        </h1>
-        <p className="text-slate-400 mb-8">
-          Answer these questions to discover your top 5 career matches with compatibility scores.
-        </p>
-      </motion.div>
+    <div>
+      <PageHeader
+        title="Career assessment"
+        description="Map your interests and constraints. We'll compute compatibility scores against 11 career paths."
+        badge={<span className="text-2xs text-muted">~3 min</span>}
+      />
 
       {!mutation.isSuccess ? (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="glass-card p-6 space-y-6">
-            {QUESTIONS.map(({ key, label, icon }, i) => (
-              <motion.div
-                key={key}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-slate-300">
-                    <span className="mr-2">{icon}</span>
-                    {label}
-                  </label>
-                  <span className="text-sm font-bold text-indigo-400 w-8 text-right">
-                    {form[key as keyof QuestionnaireData]}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
+        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Card variant="analytics">
+              <CardHeader
+                title="Questionnaire"
+                description="Rate each dimension from 0 (low) to 10 (high)"
+              />
+              {QUESTIONS.map(({ key, label, icon }) => (
+                <QuestionSlider
+                  key={key}
+                  label={label}
+                  icon={icon}
                   value={form[key as keyof QuestionnaireData] as number}
-                  onChange={(e) => updateField(key, Number(e.target.value))}
-                  className="input-range"
+                  onChange={(v) => updateField(key, v)}
                 />
-                <div className="flex justify-between text-xs text-slate-600 mt-1">
-                  <span>Low</span>
-                  <span>High</span>
-                </div>
-              </motion.div>
-            ))}
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-slate-300">
-                  <span className="mr-2">📚</span>
-                  Years Willing to Study
-                </label>
-                <span className="text-sm font-bold text-indigo-400">{form.years_to_study}</span>
-              </div>
-              <input
-                type="range"
+              ))}
+              <QuestionSlider
+                label="Years willing to study"
+                icon={GraduationCap}
+                value={form.years_to_study}
+                onChange={(v) => updateField('years_to_study', v)}
                 min={1}
                 max={15}
-                value={form.years_to_study}
-                onChange={(e) => updateField('years_to_study', Number(e.target.value))}
-                className="input-range"
               />
-            </div>
-          </div>
+            </Card>
 
-          <button
-            type="submit"
-            disabled={mutation.isPending}
-            className="btn-primary w-full"
-          >
-            {mutation.isPending ? 'Analyzing...' : 'Get Career Recommendations'}
-          </button>
+            <Button type="submit" disabled={mutation.isPending} className="w-full sm:w-auto">
+              {mutation.isPending ? 'Analyzing profile...' : 'Generate recommendations'}
+              {!mutation.isPending && <ArrowRight className="w-4 h-4" />}
+            </Button>
 
-          {mutation.isPending && <LoadingSpinner text="Computing compatibility scores..." />}
+            {mutation.isPending && <LoadingState text="Computing compatibility scores..." />}
 
-          {mutation.isError && (
-            <div className="glass-card p-4 border-red-500/30 text-red-400 text-sm">
-              Failed to get recommendations. Ensure the backend is running on port 8000.
-            </div>
-          )}
-        </form>
+            {mutation.isError && (
+              <Card className="border-danger/30 bg-danger/5">
+                <p className="text-sm text-danger">
+                  Failed to get recommendations. Ensure the backend is running.
+                </p>
+              </Card>
+            )}
+          </form>
+
+          <AssessmentSidebar form={form} progress={progress} />
+        </div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-4"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-display text-xl font-semibold text-white">
-              Your Top 5 Career Matches
-            </h2>
-            <button
-              onClick={() => mutation.reset()}
-              className="btn-secondary text-sm py-2 px-4"
-            >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Top career matches</h2>
+              <p className="text-xs text-muted mt-0.5">Ranked by profile compatibility</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => mutation.reset()}>
+              <RotateCcw className="w-3.5 h-3.5" />
               Retake
-            </button>
+            </Button>
           </div>
 
-          {mutation.data?.matches.map((match, i) => (
-            <CareerCard key={match.career_name} match={match} rank={i + 1} />
-          ))}
+          <div className="space-y-3">
+            {mutation.data?.matches.map((match, i) => (
+              <MatchResultCard
+                key={match.career_name}
+                rank={i + 1}
+                name={match.career_name}
+                match={match.match_percentage}
+                reasoning={match.reasoning}
+                salary={match.avg_starting_salary}
+                education={match.education_years}
+              />
+            ))}
+          </div>
 
-          <button
+          <Button
+            className="w-full sm:w-auto"
             onClick={() => {
               const topMatch = mutation.data?.matches[0];
               const career = careers?.find((c) => c.name === topMatch?.career_name);
               if (career) setSelectedCareerId(career.id);
               navigate('/simulator');
             }}
-            className="btn-primary w-full mt-6"
           >
-            Simulate Top Career Path
-          </button>
+            Simulate top match
+            <ArrowRight className="w-4 h-4" />
+          </Button>
         </motion.div>
       )}
     </div>

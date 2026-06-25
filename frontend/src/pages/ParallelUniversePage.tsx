@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
-import { GitCompare, Trophy } from 'lucide-react';
+import { GitCompare, Trophy, Check } from 'lucide-react';
+import { cn } from '../lib/cn';
 import { useCareers } from '../hooks/useCareers';
 import { compareCareers } from '../services/api';
 import ParallelUniverseCard from '../components/ParallelUniverseCard';
 import ComparisonBarChart from '../charts/ComparisonBarChart';
 import RadarChartComponent from '../charts/RadarChart';
-import LoadingSpinner from '../components/LoadingSpinner';
+import PageHeader from '../components/ui/PageHeader';
+import Card, { CardHeader } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import { LoadingState } from '../components/ui/EmptyState';
+import { CHART } from '../lib/chartTheme';
 
-const COLORS = ['#818cf8', '#34d399', '#f472b6'];
+const RADAR_COLORS = CHART.series;
 
 export default function ParallelUniversePage() {
   const { data: careers, isLoading } = useCareers();
@@ -28,111 +34,108 @@ export default function ParallelUniversePage() {
     mutation.reset();
   };
 
-  const handleCompare = () => {
-    if (selected.length >= 2) mutation.mutate();
-  };
-
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <GitCompare className="w-8 h-8 text-indigo-400" />
-          Parallel Universe Simulator
-        </h1>
-        <p className="text-slate-400">
-          Select 2–3 careers and explore alternate futures side-by-side.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Parallel universe"
+        description="Select 2–3 careers and compare alternate futures across earnings, stability, AI risk, and demand."
+        badge={<Badge variant="default">{selected.length}/3 selected</Badge>}
+      />
 
-      <div className="glass-card p-6">
-        <p className="text-sm text-slate-400 mb-4">
-          Selected: {selected.length}/3 careers
-        </p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      <Card variant="analytics">
+        <CardHeader title="Choose career paths" description="Tap to select up to 3 universes" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           {isLoading ? (
-            <LoadingSpinner text="Loading careers..." />
+            <LoadingState text="Loading careers..." />
           ) : (
             careers?.map((career) => {
               const isSelected = selected.includes(career.id);
+              const order = selected.indexOf(career.id);
               return (
                 <button
                   key={career.id}
+                  type="button"
                   onClick={() => toggleCareer(career.id)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={cn(
+                    'relative p-3 rounded-lg border text-left transition-all duration-150',
                     isSelected
-                      ? 'bg-indigo-500/15 border-indigo-500/40 text-white'
-                      : 'bg-slate-800/40 border-surface-border text-slate-400 hover:border-slate-600'
-                  }`}
+                      ? 'bg-accent/8 border-accent/30 text-foreground'
+                      : 'bg-surface-raised border-line text-muted hover:border-line-strong hover:text-foreground'
+                  )}
                 >
-                  <span className="font-medium text-sm">{career.name}</span>
-                  <span className="block text-xs mt-1 opacity-70">
-                    ₹{career.avg_starting_salary}L starting
+                  {isSelected && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                    </span>
+                  )}
+                  <span className="text-sm font-medium block pr-6">{career.name}</span>
+                  <span className="text-2xs text-secondary mt-0.5 block">
+                    ₹{career.avg_starting_salary}L · {career.education_years}yr
                   </span>
+                  {isSelected && order >= 0 && (
+                    <span className="text-2xs text-accent mt-1 block">
+                      Universe {String.fromCharCode(65 + order)}
+                    </span>
+                  )}
                 </button>
               );
             })
           )}
         </div>
-        <button
-          onClick={handleCompare}
-          disabled={selected.length < 2 || mutation.isPending}
-          className="btn-primary"
-        >
-          {mutation.isPending ? 'Comparing...' : 'Compare Universes'}
-        </button>
-      </div>
+        <div className="mt-4 pt-4 border-t border-line">
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={selected.length < 2 || mutation.isPending}
+          >
+            <GitCompare className="w-3.5 h-3.5" />
+            {mutation.isPending ? 'Comparing...' : 'Compare universes'}
+          </Button>
+        </div>
+      </Card>
 
-      {mutation.isPending && <LoadingSpinner text="Building parallel universe comparison..." />}
+      {mutation.isPending && <LoadingState text="Building comparison..." />}
 
       {mutation.data && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-6"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
           {mutation.data.summary && (
-            <div className="glass-card p-5 flex flex-wrap gap-6">
-              <div className="flex items-center gap-2 text-sm">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                <span className="text-slate-400">Highest Earnings:</span>
-                <span className="text-white font-medium">{mutation.data.summary.highest_earnings}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Most Stable:</span>
-                <span className="text-white font-medium">{mutation.data.summary.most_stable}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-slate-400">Lowest AI Risk:</span>
-                <span className="text-white font-medium">{mutation.data.summary.lowest_ai_risk}</span>
-              </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Highest earnings', value: mutation.data.summary.highest_earnings, icon: Trophy },
+                { label: 'Most stable', value: mutation.data.summary.most_stable },
+                { label: 'Lowest AI risk', value: mutation.data.summary.lowest_ai_risk },
+              ].map(({ label, value, icon: Icon }) => (
+                <Card key={label} padding="sm" className="flex items-center gap-3">
+                  {Icon && <Icon className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={1.75} />}
+                  <div>
+                    <p className="text-2xs text-muted">{label}</p>
+                    <p className="text-sm font-medium text-foreground">{value}</p>
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {mutation.data.careers.map((career, i) => (
               <ParallelUniverseCard key={career.id} career={career} index={i} />
             ))}
           </div>
 
-          <div className="glass-card p-6">
-            <h3 className="font-display font-semibold text-white mb-4">
-              Multi-Metric Comparison
-            </h3>
+          <Card variant="analytics">
+            <CardHeader title="Multi-metric comparison" />
             <ComparisonBarChart careers={mutation.data.careers} />
-          </div>
+          </Card>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {mutation.data.careers.map((career, i) => (
-              <div key={career.id} className="glass-card p-6">
-                <h4 className="font-display font-semibold text-white mb-4 text-center">
-                  {career.name}
-                </h4>
+              <Card key={career.id} variant="analytics">
+                <CardHeader title={career.name} description="Risk vs reward profile" />
                 <RadarChartComponent
                   metrics={career.radar}
-                  color={COLORS[i]}
+                  color={RADAR_COLORS[i]}
                   name={career.name}
                 />
-              </div>
+              </Card>
             ))}
           </div>
         </motion.div>

@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { SalaryDistributionBin } from '../types';
+import { CHART, tooltipStyle } from '../lib/chartTheme';
 
 interface Props {
   data: SalaryDistributionBin[];
@@ -21,36 +22,25 @@ export default function SalaryHistogram({ data }: Props) {
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+    <ResponsiveContainer width="100%" height={280}>
+      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fill: '#94a3b8', fontSize: 10 }}
+          tick={{ fill: CHART.axis, fontSize: 9 }}
           angle={-45}
           textAnchor="end"
           interval={2}
+          axisLine={false}
+          tickLine={false}
         />
-        <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
+        <YAxis tick={{ fill: CHART.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
         <Tooltip
-          contentStyle={{
-            background: 'rgba(15,23,42,0.95)',
-            border: '1px solid rgba(148,163,184,0.2)',
-            borderRadius: '12px',
-            color: '#e2e8f0',
-          }}
+          contentStyle={tooltipStyle}
           formatter={(value: number) => [value, 'Simulations']}
-          labelFormatter={(_, payload) =>
-            payload?.[0]?.payload?.range ?? ''
-          }
+          labelFormatter={(_, payload) => payload?.[0]?.payload?.range ?? ''}
         />
-        <Bar dataKey="count" fill="url(#salaryGradient)" radius={[4, 4, 0, 0]} />
-        <defs>
-          <linearGradient id="salaryGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#6366f1" />
-          </linearGradient>
-        </defs>
+        <Bar dataKey="count" fill={CHART.primary} radius={[3, 3, 0, 0]} opacity={0.9} />
       </BarChart>
     </ResponsiveContainer>
   );
