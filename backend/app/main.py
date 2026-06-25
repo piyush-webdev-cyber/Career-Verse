@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import router
+from app.config import settings
 from app.database.database import engine, Base, SessionLocal
 from app.database.seed import seed_database
 
@@ -28,8 +29,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origin_list,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,6 +45,8 @@ def root():
         "name": "CareerVerse AI",
         "tagline": "Simulate Your Future Before You Choose It.",
         "version": "1.0.0",
+        "frontend": settings.frontend_url,
+        "docs": "/docs",
     }
 
 

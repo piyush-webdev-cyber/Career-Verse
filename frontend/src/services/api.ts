@@ -10,12 +10,43 @@ import type {
   StabilityResponse,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const PRODUCTION_API = 'https://career-verse-smra.onrender.com';
+
+function resolveApiBase(): string {
+  const fromEnv = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '');
+  if (fromEnv) return fromEnv;
+  if (import.meta.env.DEV) return '/api';
+  return PRODUCTION_API;
+}
+
+export const API_BASE = resolveApiBase();
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 120_000,
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(
+        new Error(
+          'Request timed out. The server may be waking up — wait a moment and try again.'
+        )
+      );
+    }
+    if (!error.response) {
+      return Promise.reject(
+        new Error(
+          'Cannot reach the API. If this is your first visit, the backend may need ~30s to start on Render.'
+        )
+      );
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const getCareers = async (): Promise<Career[]> => {
   const { data } = await api.get('/careers');

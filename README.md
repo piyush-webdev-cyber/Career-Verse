@@ -96,6 +96,14 @@ The Vite dev server proxies `/api/*` requests to `http://localhost:8000`.
 | GET | `/dashboard/{user_id}` | User dashboard data |
 | GET | `/ai-disruption/{career}` | AI disruption timeline |
 
+## Live URLs
+
+| Service | URL |
+|---------|-----|
+| **Frontend** | https://career-verse-one.vercel.app |
+| **Backend API** | https://career-verse-smra.onrender.com |
+| **API docs** | https://career-verse-smra.onrender.com/docs |
+
 ## Deployment
 
 ### Backend (Render)
@@ -104,12 +112,18 @@ The Vite dev server proxies `/api/*` requests to `http://localhost:8000`.
 2. Set root directory to `backend`
 3. Build: `pip install -r requirements.txt`
 4. Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Environment variables (optional — defaults are set in `render.yaml`):
+   - `CORS_ORIGINS` = `http://localhost:5173,https://career-verse-one.vercel.app`
+   - `FRONTEND_URL` = `https://career-verse-one.vercel.app`
 
 ### Frontend (Vercel)
 
 1. Set root directory to `frontend`
-2. Set environment variable: `VITE_API_URL=https://your-api.onrender.com`
-3. Deploy
+2. Environment variable (also in `.env.production` and `vercel.json`):
+   - `VITE_API_URL` = `https://career-verse-smra.onrender.com`
+3. Redeploy after pushing changes
+
+> **Note:** Render free tier sleeps after inactivity. The first API request may take 30–60 seconds while the server wakes up.
 
 ## Monte Carlo Engine
 
