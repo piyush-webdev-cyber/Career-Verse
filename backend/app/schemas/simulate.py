@@ -2,7 +2,6 @@ from pydantic import BaseModel
 
 
 class SimulateRequest(BaseModel):
-    user_id: int = 1
     career_id: int
     num_simulations: int = 10000
 

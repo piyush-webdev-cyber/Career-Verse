@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database.database import get_db
 from app.models.user import User
 from app.models.simulation import Simulation
@@ -12,15 +13,10 @@ from app.schemas.dashboard import DashboardResponse, SimulationSummary
 router = APIRouter()
 
 
-@router.get("/dashboard/{user_id}", response_model=DashboardResponse)
-def get_dashboard(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
+def _build_dashboard(user: User, db: Session) -> DashboardResponse:
     latest_questionnaire = (
         db.query(QuestionnaireResponse)
-        .filter(QuestionnaireResponse.user_id == user_id)
+        .filter(QuestionnaireResponse.user_id == user.id)
         .order_by(QuestionnaireResponse.created_at.desc())
         .first()
     )
@@ -31,7 +27,7 @@ def get_dashboard(user_id: int, db: Session = Depends(get_db)):
 
     simulations = (
         db.query(Simulation)
-        .filter(Simulation.user_id == user_id)
+        .filter(Simulation.user_id == user.id)
         .order_by(Simulation.created_at.desc())
         .limit(10)
         .all()
@@ -61,3 +57,22 @@ def get_dashboard(user_id: int, db: Session = Depends(get_db)):
         simulations=sim_summaries,
         saved_reports_count=len(simulations),
     )
+
+
+@router.get("/dashboard/me", response_model=DashboardResponse)
+def get_my_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return _build_dashboard(current_user, db)
+
+
+@router.get("/dashboard/{user_id}", response_model=DashboardResponse)
+def get_dashboard(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return _build_dashboard(current_user, db)

@@ -10,6 +10,9 @@ class Settings(BaseSettings):
         "https://career-verse-one.vercel.app"
     )
     frontend_url: str = "https://career-verse-one.vercel.app"
+    jwt_secret: str = "careerverse-dev-secret-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
 
     @property
     def cors_origin_list(self) -> list[str]:

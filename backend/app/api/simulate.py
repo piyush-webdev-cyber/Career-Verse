@@ -3,8 +3,10 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database.database import get_db
 from app.models.career import Career
+from app.models.user import User
 from app.models.simulation import Simulation
 from app.schemas.simulate import SimulateRequest, SimulateResponse, ProbabilityInsight
 from app.simulation.monte_carlo import run_monte_carlo
@@ -14,7 +16,11 @@ router = APIRouter()
 
 
 @router.post("/simulate", response_model=SimulateResponse)
-def run_simulation(request: SimulateRequest, db: Session = Depends(get_db)):
+def run_simulation(
+    request: SimulateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     career = db.query(Career).filter(Career.id == request.career_id).first()
     if not career:
         raise HTTPException(status_code=404, detail="Career not found")
@@ -71,7 +77,7 @@ def run_simulation(request: SimulateRequest, db: Session = Depends(get_db)):
     }
 
     simulation = Simulation(
-        user_id=request.user_id,
+        user_id=current_user.id,
         career_id=career.id,
         average_salary=results["mean_salary"],
         median_salary=results["median_salary"],

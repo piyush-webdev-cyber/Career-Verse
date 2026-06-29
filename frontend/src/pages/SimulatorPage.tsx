@@ -22,10 +22,10 @@ import AITimelineChart from '../charts/AITimelineChart';
 
 export default function SimulatorPage() {
   const { data: careers, isLoading: careersLoading } = useCareers();
-  const { userId, lastSimulation, setLastSimulation, selectedCareerId, setSelectedCareerId } = useApp();
+  const { lastSimulation, setLastSimulation, selectedCareerId, setSelectedCareerId } = useApp();
   const [careerId, setCareerId] = useState<number | null>(selectedCareerId);
   const [timelineYear, setTimelineYear] = useState(15);
-  const simulation = useSimulation(userId);
+  const simulation = useSimulation();
 
   const selectedCareer = careers?.find((c) => c.id === careerId);
 

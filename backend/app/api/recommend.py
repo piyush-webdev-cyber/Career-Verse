@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database.database import get_db
 from app.models.user import User
 from app.models.questionnaire import QuestionnaireResponse
@@ -13,18 +14,16 @@ router = APIRouter()
 
 
 @router.post("/recommend", response_model=RecommendResponse)
-def recommend_careers(request: RecommendRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user:
-        user = User(name=request.name, email=request.email)
-        db.add(user)
-        db.flush()
-
-    responses = request.model_dump(exclude={"name", "email"})
+def recommend_careers(
+    request: RecommendRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    responses = request.model_dump()
     matches = get_recommendations(responses)
 
     questionnaire = QuestionnaireResponse(
-        user_id=user.id,
+        user_id=current_user.id,
         interest_coding=request.interest_coding,
         interest_math=request.interest_math,
         interest_biology=request.interest_biology,
@@ -41,6 +40,6 @@ def recommend_careers(request: RecommendRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return RecommendResponse(
-        user_id=user.id,
+        user_id=current_user.id,
         matches=[CareerMatch(**m) for m in matches],
     )

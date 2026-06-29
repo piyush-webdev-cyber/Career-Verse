@@ -17,8 +17,6 @@ export interface Career {
 }
 
 export interface QuestionnaireData {
-  name: string;
-  email: string;
   interest_coding: number;
   interest_math: number;
   interest_biology: number;

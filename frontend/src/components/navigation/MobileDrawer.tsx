@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, Play, X } from 'lucide-react';
+import { ChevronRight, LogOut, User, X } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS } from './navConfig';
 import NavbarBrand from './NavbarBrand';
 
@@ -13,6 +14,8 @@ interface MobileDrawerProps {
 
 export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -62,6 +65,18 @@ export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
 
             <div className="mx-5 mb-4 h-px bg-nav" />
 
+            {isAuthenticated && user && (
+              <div className="mx-5 mb-4 flex items-center gap-3 rounded-xl border border-nav bg-white/[0.03] p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/12 text-primary text-sm font-semibold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                  <p className="text-2xs text-muted truncate">{user.email}</p>
+                </div>
+              </div>
+            )}
+
             <nav className="flex-1 overflow-y-auto px-3">
               {NAV_ITEMS.map(({ path, label, subtitle, icon: Icon }) => {
                 const active = pathname === path;
@@ -78,39 +93,65 @@ export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                     <div
                       className={cn(
                         'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors',
-                        active
-                          ? 'border-primary/30 bg-primary/15 text-primary'
-                          : 'border-nav bg-white/[0.02] text-muted group-hover:text-foreground',
+                        active ? 'border-primary/30 bg-primary/10' : 'border-nav bg-white/[0.02]',
                       )}
                     >
                       <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-medium leading-tight">{label}</p>
-                      <p className="text-xs text-muted truncate">{subtitle}</p>
+                      <p className="text-sm font-medium">{label}</p>
+                      {subtitle && (
+                        <p className="text-2xs text-muted truncate">{subtitle}</p>
+                      )}
                     </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted opacity-60" />
+                    <ChevronRight className="h-4 w-4 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 );
               })}
             </nav>
 
             <div className="border-t border-nav p-5 space-y-2.5">
-              <Link
-                to="/questionnaire"
-                onClick={onClose}
-                className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]"
-              >
-                Start Assessment
-              </Link>
-              <Link
-                to="/simulator"
-                onClick={onClose}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-nav bg-white/[0.03] text-sm font-medium text-foreground transition-colors hover:bg-white/[0.06]"
-              >
-                <Play className="h-4 w-4" />
-                Run Simulation
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    onClick={onClose}
+                    className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white shadow-lg shadow-primary/25"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      onClose();
+                      navigate('/');
+                    }}
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-nav text-sm font-medium text-muted hover:text-foreground"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/signup"
+                    onClick={onClose}
+                    className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white shadow-lg shadow-primary/25"
+                  >
+                    Sign up free
+                  </Link>
+                  <Link
+                    to="/login"
+                    onClick={onClose}
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-nav bg-white/[0.03] text-sm font-medium text-foreground"
+                  >
+                    <User className="h-4 w-4" />
+                    Log in
+                  </Link>
+                </>
+              )}
             </div>
           </motion.aside>
         </>

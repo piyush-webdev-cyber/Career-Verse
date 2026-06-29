@@ -39,8 +39,6 @@ const QUESTIONS = [
 ] as const;
 
 const DEFAULT: QuestionnaireData = {
-  name: 'Demo User',
-  email: 'demo@careerverse.ai',
   interest_coding: 0,
   interest_math: 0,
   interest_biology: 0,
@@ -55,7 +53,7 @@ const DEFAULT: QuestionnaireData = {
 
 export default function QuestionnairePage() {
   const [form, setForm] = useState<QuestionnaireData>(DEFAULT);
-  const { setMatches, setUserId, setSelectedCareerId } = useApp();
+  const { setMatches, setSelectedCareerId } = useApp();
   const { data: careers } = useCareers();
   const navigate = useNavigate();
 
@@ -63,7 +61,6 @@ export default function QuestionnairePage() {
     mutationFn: recommendCareers,
     onSuccess: (data) => {
       setMatches(data.matches);
-      setUserId(data.user_id);
     },
   });
 

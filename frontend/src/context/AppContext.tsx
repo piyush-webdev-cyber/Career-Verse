@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 import type { CareerMatch, SimulateResponse } from '../types';
 
 interface AppState {
   userId: number;
-  setUserId: (id: number) => void;
   matches: CareerMatch[];
   setMatches: (matches: CareerMatch[]) => void;
   lastSimulation: SimulateResponse | null;
@@ -15,16 +15,17 @@ interface AppState {
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState(1);
+  const { user } = useAuth();
   const [matches, setMatches] = useState<CareerMatch[]>([]);
   const [lastSimulation, setLastSimulation] = useState<SimulateResponse | null>(null);
   const [selectedCareerId, setSelectedCareerId] = useState<number | null>(null);
+
+  const userId = user?.id ?? 0;
 
   return (
     <AppContext.Provider
       value={{
         userId,
-        setUserId,
         matches,
         setMatches,
         lastSimulation,

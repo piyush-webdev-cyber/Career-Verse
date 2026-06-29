@@ -27,7 +27,8 @@ export default function DashboardPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', userId],
-    queryFn: () => getDashboard(userId),
+    queryFn: getDashboard,
+    enabled: userId > 0,
   });
 
   const displayMatches = matches.length > 0 ? matches : (data?.career_matches ?? []);

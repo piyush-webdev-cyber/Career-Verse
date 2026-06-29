@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, type LucideIcon } from 'lucide-react';
+import { Menu, LogOut, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { useAuth } from '../../context/AuthContext';
 import { NAV_ITEMS } from './navConfig';
 import { useNavbarScroll } from './useNavbarScroll';
 import NavbarBrand from './NavbarBrand';
@@ -103,8 +104,10 @@ function NavLinkTablet({
 
 export default function PremiumNavbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const scrolled = useNavbarScroll();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
   return (
     <>
@@ -157,19 +160,62 @@ export default function PremiumNavbar() {
             </nav>
 
             <div className="ml-auto flex items-center gap-1.5">
-              <Link
-                to="/questionnaire"
-                className={cn(
-                  'hidden md:inline-flex h-10 items-center justify-center rounded-xl px-4',
-                  'bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white',
-                  'shadow-lg shadow-primary/20 transition-all duration-200 ease-out',
-                  'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]',
-                  'lg:px-5',
-                )}
-              >
-                <span className="hidden lg:inline">Start Assessment</span>
-                <span className="lg:hidden">Start</span>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <div className="hidden md:flex items-center gap-2 mr-1">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/12 text-primary text-xs font-semibold">
+                      {user?.name?.charAt(0).toUpperCase() ?? 'U'}
+                    </div>
+                    <span className="hidden lg:block text-sm text-muted max-w-[120px] truncate">
+                      {user?.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                    }}
+                    className="hidden md:inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm text-muted hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden lg:inline">Log out</span>
+                  </button>
+                  <Link
+                    to="/dashboard"
+                    className={cn(
+                      'hidden md:inline-flex h-10 items-center justify-center rounded-xl px-4',
+                      'bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white',
+                      'shadow-lg shadow-primary/20 transition-all duration-200 ease-out',
+                      'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]',
+                    )}
+                  >
+                    Dashboard
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="hidden md:inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-medium text-muted hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className={cn(
+                      'hidden md:inline-flex h-10 items-center justify-center rounded-xl px-4',
+                      'bg-gradient-to-r from-primary to-highlight text-sm font-semibold text-white',
+                      'shadow-lg shadow-primary/20 transition-all duration-200 ease-out',
+                      'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]',
+                      'lg:px-5',
+                    )}
+                  >
+                    <span className="hidden lg:inline">Sign up free</span>
+                    <span className="lg:hidden">Sign up</span>
+                  </Link>
+                </>
+              )}
 
               <div className="flex items-center md:hidden">
                 <IconButton label="Open menu" onClick={() => setDrawerOpen(true)}>

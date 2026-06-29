@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database.database import get_db
 from app.models.career import Career
+from app.models.user import User
 from app.schemas.compare import CompareRequest, CompareResponse
 from app.services.compare import compare_careers
 
@@ -10,7 +12,11 @@ router = APIRouter()
 
 
 @router.post("/compare", response_model=CompareResponse)
-def compare(request: CompareRequest, db: Session = Depends(get_db)):
+def compare(
+    request: CompareRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     careers = (
         db.query(Career).filter(Career.id.in_(request.career_ids)).all()
     )

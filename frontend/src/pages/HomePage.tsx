@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, BarChart3, GitCompare, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import HeroPreview from '../components/HeroPreview';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
@@ -46,6 +47,10 @@ const item = {
 };
 
 export default function HomePage() {
+  const { isAuthenticated } = useAuth();
+  const startHref = isAuthenticated ? '/questionnaire' : '/signup';
+  const simHref = isAuthenticated ? '/simulator' : '/login';
+
   return (
     <div className="page-container space-y-16 sm:space-y-20">
       <section className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center pt-4 sm:pt-8">
@@ -68,15 +73,15 @@ export default function HomePage() {
           </motion.p>
 
           <motion.div variants={item} className="flex flex-wrap gap-3">
-            <Link to="/questionnaire">
+            <Link to={startHref}>
               <Button size="lg">
-                Start assessment
+                {isAuthenticated ? 'Start assessment' : 'Get started free'}
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <Link to="/simulator">
+            <Link to={simHref}>
               <Button variant="secondary" size="lg">
-                Run simulation
+                {isAuthenticated ? 'Run simulation' : 'Log in'}
               </Button>
             </Link>
           </motion.div>
@@ -153,9 +158,9 @@ export default function HomePage() {
               description="Complete the assessment in under 3 minutes, then run your first simulation."
             />
           </div>
-          <Link to="/questionnaire" className="flex-shrink-0">
+          <Link to={isAuthenticated ? '/questionnaire' : '/signup'} className="flex-shrink-0">
             <Button size="lg">
-              Get started
+              {isAuthenticated ? 'Get started' : 'Sign up free'}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>

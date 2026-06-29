@@ -2,8 +2,6 @@ from pydantic import BaseModel, Field
 
 
 class RecommendRequest(BaseModel):
-    name: str = "Demo User"
-    email: str = "demo@careerverse.ai"
     interest_coding: int = Field(ge=0, le=10)
     interest_math: int = Field(ge=0, le=10)
     interest_biology: int = Field(ge=0, le=10)

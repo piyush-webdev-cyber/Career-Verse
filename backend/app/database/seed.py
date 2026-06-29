@@ -235,7 +235,6 @@ CAREER_SEED_DATA = [
 
 def seed_database(db):
     from app.models.career import Career
-    from app.models.user import User
 
     if db.query(Career).count() > 0:
         return
@@ -258,9 +257,5 @@ def seed_database(db):
             recommended_skills=data["recommended_skills"],
         )
         db.add(career)
-
-    demo_user = User(name="Demo User", email="demo@careerverse.ai")
-    db.add(demo_user)
-    db.commit()
 
     db.commit()
