@@ -1,29 +1,64 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useMutation } from '@tanstack/react-query';
-import { GitCompare, Trophy, Check } from 'lucide-react';
+import {
+  GitCompare,
+  Trophy,
+  Plus,
+  Search,
+  AlertCircle,
+} from 'lucide-react';
 import { cn } from '../lib/cn';
-import { useCareers } from '../hooks/useCareers';
-import { compareCareers } from '../services/api';
+import { CAREER_CATEGORIES, type CareerCategory, type CompareCareerOption } from '../data/careers';
+import { useCompareCareers } from '../hooks/useCompareCareers';
+import { compareCareerOptions } from '../lib/compareCareersLocal';
 import ParallelUniverseCard from '../components/ParallelUniverseCard';
+import CareerSelectCard from '../components/CareerSelectCard';
+import AddCustomCareerDialog from '../components/AddCustomCareerDialog';
 import ComparisonBarChart from '../charts/ComparisonBarChart';
 import RadarChartComponent from '../charts/RadarChart';
 import PageHeader from '../components/ui/PageHeader';
 import Card, { CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import Input from '../components/ui/Input';
 import { LoadingState } from '../components/ui/EmptyState';
 import { CHART } from '../lib/chartTheme';
+import type { CompareResponse } from '../types';
 
 const RADAR_COLORS = CHART.series;
 
 export default function ParallelUniversePage() {
-  const { data: careers, isLoading } = useCareers();
+  const { allCareers, addCustomCareer } = useCompareCareers();
   const [selected, setSelected] = useState<number[]>([]);
+  const [category, setCategory] = useState<'All' | CareerCategory>('All');
+  const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [compareResult, setCompareResult] = useState<CompareResponse | null>(null);
+  const [comparing, setComparing] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: () => compareCareers(selected),
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allCareers.filter((c) => {
+      const catOk = category === 'All' || c.category === category;
+      if (!catOk) return false;
+      if (!q) return true;
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.category.toLowerCase().includes(q) ||
+        (c.notes?.toLowerCase().includes(q) ?? false)
+      );
+    });
+  }, [allCareers, category, search]);
+
+  const selectedCareers = useMemo(
+    () =>
+      selected
+        .map((id) => allCareers.find((c) => c.id === id))
+        .filter((c): c is CompareCareerOption => Boolean(c)),
+    [selected, allCareers]
+  );
+
+  const atMax = selected.length >= 3;
 
   const toggleCareer = (id: number) => {
     setSelected((prev) => {
@@ -31,7 +66,17 @@ export default function ParallelUniversePage() {
       if (prev.length >= 3) return prev;
       return [...prev, id];
     });
-    mutation.reset();
+    setCompareResult(null);
+  };
+
+  const handleCompare = () => {
+    if (selectedCareers.length < 2) return;
+    setComparing(true);
+    // Brief delay for UX parity with previous API call feel
+    window.setTimeout(() => {
+      setCompareResult(compareCareerOptions(selectedCareers));
+      setComparing(false);
+    }, 280);
   };
 
   return (
@@ -43,66 +88,127 @@ export default function ParallelUniversePage() {
       />
 
       <Card variant="analytics">
-        <CardHeader title="Choose career paths" description="Tap to select up to 3 universes" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-          {isLoading ? (
-            <LoadingState text="Loading careers..." />
-          ) : (
-            careers?.map((career) => {
-              const isSelected = selected.includes(career.id);
-              const order = selected.indexOf(career.id);
-              return (
-                <button
-                  key={career.id}
-                  type="button"
-                  onClick={() => toggleCareer(career.id)}
-                  className={cn(
-                    'relative p-3 rounded-lg border text-left transition-all duration-150',
-                    isSelected
-                      ? 'bg-accent/8 border-accent/30 text-foreground'
-                      : 'bg-surface-raised border-line text-muted hover:border-line-strong hover:text-foreground'
-                  )}
-                >
-                  {isSelected && (
-                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                      <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                    </span>
-                  )}
-                  <span className="text-sm font-medium block pr-6">{career.name}</span>
-                  <span className="text-2xs text-secondary mt-0.5 block">
-                    ₹{career.avg_starting_salary}L · {career.education_years}yr
-                  </span>
-                  {isSelected && order >= 0 && (
-                    <span className="text-2xs text-accent mt-1 block">
-                      Universe {String.fromCharCode(65 + order)}
-                    </span>
-                  )}
-                </button>
-              );
-            })
-          )}
+        <CardHeader
+          title="Choose career paths"
+          description="Search or filter by industry — tap to select up to 3 universes"
+        />
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search careers — AI, Doctor, Pilot..."
+              className="pl-9"
+              aria-label="Search careers"
+            />
+          </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-line">
+
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {CAREER_CATEGORIES.map((cat) => {
+            const active = category === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-2xs font-medium border transition-all duration-150',
+                  active
+                    ? 'bg-accent/15 border-accent/40 text-accent'
+                    : 'bg-surface-raised border-line text-muted hover:text-foreground hover:border-line-strong'
+                )}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
+        {atMax && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20 text-warning text-xs">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Maximum 3 careers can be compared. Deselect one to choose another.
+          </div>
+        )}
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+          <button
+            type="button"
+            onClick={() => setDialogOpen(true)}
+            className={cn(
+              'flex flex-col items-center justify-center gap-2 min-h-[108px] p-3.5 rounded-xl',
+              'border border-dashed border-accent/40 bg-accent/[0.04]',
+              'text-accent hover:bg-accent/[0.08] hover:border-accent/60 transition-all duration-200'
+            )}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15">
+              <Plus className="w-4 h-4" />
+            </span>
+            <span className="text-sm font-medium">Add custom career</span>
+          </button>
+
+          {filtered.map((career) => {
+            const isSelected = selected.includes(career.id);
+            return (
+              <CareerSelectCard
+                key={career.id}
+                career={career}
+                selected={isSelected}
+                universeIndex={selected.indexOf(career.id)}
+                disabled={atMax && !isSelected}
+                onToggle={() => toggleCareer(career.id)}
+              />
+            );
+          })}
+        </div>
+
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted text-center py-8">
+            No careers match your search. Try another term or add a custom career.
+          </p>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-line flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <p className="text-2xs text-secondary">
+            Showing {filtered.length} of {allCareers.length} careers
+            {selectedCareers.length > 0 && (
+              <>
+                {' · '}
+                <span className="text-muted">
+                  {selectedCareers.map((c) => c.name).join(', ')}
+                </span>
+              </>
+            )}
+          </p>
           <Button
-            onClick={() => mutation.mutate()}
-            disabled={selected.length < 2 || mutation.isPending}
+            onClick={handleCompare}
+            disabled={selected.length < 2 || comparing}
           >
             <GitCompare className="w-3.5 h-3.5" />
-            {mutation.isPending ? 'Comparing...' : 'Compare universes'}
+            {comparing ? 'Comparing...' : 'Compare universes'}
           </Button>
         </div>
       </Card>
 
-      {mutation.isPending && <LoadingState text="Building comparison..." />}
+      <AddCustomCareerDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onAdd={addCustomCareer}
+      />
 
-      {mutation.data && (
+      {comparing && <LoadingState text="Building comparison..." />}
+
+      {compareResult && !comparing && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-          {mutation.data.summary && (
+          {compareResult.summary && (
             <div className="grid sm:grid-cols-3 gap-3">
               {[
-                { label: 'Highest earnings', value: mutation.data.summary.highest_earnings, icon: Trophy },
-                { label: 'Most stable', value: mutation.data.summary.most_stable },
-                { label: 'Lowest AI risk', value: mutation.data.summary.lowest_ai_risk },
+                { label: 'Highest earnings', value: compareResult.summary.highest_earnings, icon: Trophy },
+                { label: 'Most stable', value: compareResult.summary.most_stable },
+                { label: 'Lowest AI risk', value: compareResult.summary.lowest_ai_risk },
               ].map(({ label, value, icon: Icon }) => (
                 <Card key={label} padding="sm" className="flex items-center gap-3">
                   {Icon && <Icon className="w-4 h-4 text-warning flex-shrink-0" strokeWidth={1.75} />}
@@ -116,18 +222,18 @@ export default function ParallelUniversePage() {
           )}
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mutation.data.careers.map((career, i) => (
+            {compareResult.careers.map((career, i) => (
               <ParallelUniverseCard key={career.id} career={career} index={i} />
             ))}
           </div>
 
           <Card variant="analytics">
             <CardHeader title="Multi-metric comparison" />
-            <ComparisonBarChart careers={mutation.data.careers} />
+            <ComparisonBarChart careers={compareResult.careers} />
           </Card>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mutation.data.careers.map((career, i) => (
+            {compareResult.careers.map((career, i) => (
               <Card key={career.id} variant="analytics">
                 <CardHeader title={career.name} description="Risk vs reward profile" />
                 <RadarChartComponent
