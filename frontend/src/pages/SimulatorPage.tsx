@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Activity, Target, Play } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Target, Play, Plus } from 'lucide-react';
 import { useCareers } from '../hooks/useCareers';
 import { useSimulation } from '../hooks/useSimulation';
 import { getAIDisruption } from '../services/api';
+import { useCompareCareers } from '../hooks/useCompareCareers';
+import { simulateCareerOption } from '../lib/simulateCareerLocal';
 import { useApp } from '../context/AppContext';
 import StabilityMeter, { RiskMeter } from '../components/StabilityMeter';
+import AddCustomCareerDialog from '../components/AddCustomCareerDialog';
 import PageHeader from '../components/ui/PageHeader';
 import Card, { CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -22,26 +25,57 @@ import AITimelineChart from '../charts/AITimelineChart';
 
 export default function SimulatorPage() {
   const { data: careers, isLoading: careersLoading } = useCareers();
+  const { customCareers, addCustomCareer } = useCompareCareers();
   const { lastSimulation, setLastSimulation, selectedCareerId, setSelectedCareerId } = useApp();
   const [careerId, setCareerId] = useState<number | null>(selectedCareerId);
   const [timelineYear, setTimelineYear] = useState(15);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [localResult, setLocalResult] = useState<typeof lastSimulation>(null);
+  const [localPending, setLocalPending] = useState(false);
   const simulation = useSimulation();
 
   const selectedCareer = careers?.find((c) => c.id === careerId);
+  const selectedCustomCareer = customCareers.find((c) => c.id === careerId);
+  const activeCareerName = selectedCareer?.name ?? selectedCustomCareer?.name;
 
   const { data: aiData } = useQuery({
-    queryKey: ['ai-disruption', selectedCareer?.name],
-    queryFn: () => getAIDisruption(selectedCareer!.name),
-    enabled: !!selectedCareer?.name,
+    queryKey: ['ai-disruption', activeCareerName],
+    queryFn: () => getAIDisruption(activeCareerName!),
+    enabled: !!activeCareerName,
   });
 
   useEffect(() => {
     if (selectedCareerId && !careerId) setCareerId(selectedCareerId);
   }, [selectedCareerId, careerId]);
 
+  const handleCareerChange = (value: string) => {
+    if (value === 'custom') {
+      setDialogOpen(true);
+      return;
+    }
+    setCareerId(value ? Number(value) : null);
+    setLocalResult(null);
+    simulation.reset();
+  };
+
   const handleSimulate = () => {
     if (!careerId) return;
+
+    if (selectedCustomCareer) {
+      simulation.reset();
+      setLocalPending(true);
+      window.setTimeout(() => {
+        const data = simulateCareerOption(selectedCustomCareer);
+        setLocalResult(data);
+        setLastSimulation(data);
+        setTimelineYear(data.years);
+        setLocalPending(false);
+      }, 120);
+      return;
+    }
+
     setSelectedCareerId(careerId);
+    setLocalResult(null);
     simulation.mutate(careerId, {
       onSuccess: (data) => {
         setLastSimulation(data);
@@ -50,7 +84,8 @@ export default function SimulatorPage() {
     });
   };
 
-  const result = simulation.data ?? lastSimulation;
+  const result = localResult ?? simulation.data ?? lastSimulation;
+  const isRunning = simulation.isPending || localPending;
 
   const yearSnapshot = useMemo(() => {
     if (!result) return null;
@@ -75,7 +110,7 @@ export default function SimulatorPage() {
           <Select
             label="Career path"
             value={careerId ?? ''}
-            onChange={(e) => setCareerId(Number(e.target.value))}
+            onChange={(e) => handleCareerChange(e.target.value)}
             disabled={careersLoading}
             className="flex-1 min-w-0"
           >
@@ -87,21 +122,53 @@ export default function SimulatorPage() {
                 {c.name} — ₹{c.avg_starting_salary}L starting
               </option>
             ))}
+            <option value="custom">+ Add custom career...</option>
+            {customCareers.length > 0 && (
+              <optgroup label="Custom careers">
+                {customCareers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} - Rs {c.averageSalary}L starting
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </Select>
-          <div className="flex items-stretch sm:items-end w-full sm:w-auto shrink-0">
+          <div className="flex items-stretch sm:items-end gap-2 w-full sm:w-auto shrink-0">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDialogOpen(true)}
+              className="px-3"
+              aria-label="Add custom career"
+              title="Add custom career"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
             <Button
               onClick={handleSimulate}
-              disabled={!careerId || simulation.isPending}
-              className="w-full sm:w-auto justify-center"
+              disabled={!careerId || isRunning}
+              className="flex-1 sm:flex-none sm:w-auto justify-center"
             >
               <Play className="w-3.5 h-3.5" />
-              {simulation.isPending ? 'Running...' : 'Run simulation'}
+              {isRunning ? 'Running...' : 'Run simulation'}
             </Button>
           </div>
         </div>
       </Card>
 
-      {simulation.isPending && <LoadingState text="Processing 10,000 Monte Carlo simulations..." />}
+      <AddCustomCareerDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onAdd={(input) => {
+          const nextId = Math.max(9999, ...customCareers.map((c) => c.id)) + 1;
+          addCustomCareer(input);
+          setCareerId(nextId);
+          setLocalResult(null);
+          simulation.reset();
+        }}
+      />
+
+      {isRunning && <LoadingState text="Processing 10,000 Monte Carlo simulations..." />}
 
       {simulation.isError && (
         <Card className="border-danger/30 bg-danger/5">
@@ -109,7 +176,7 @@ export default function SimulatorPage() {
         </Card>
       )}
 
-      {result && !simulation.isPending && (
+      {result && !isRunning && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
