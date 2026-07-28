@@ -1,0 +1,20 @@
+INFO:     Started server process [27876]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58475 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51966 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63307 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58050 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58069 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61793 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61800 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:58762 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:59834 - "POST /auth/signup HTTP/1.1" 201 Created
+INFO:     127.0.0.1:59837 - "GET /dashboard/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59843 - "GET /careers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57905 - "GET /ai-disruption/Politician HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53660 - "GET /ai-disruption/Plumber HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63291 - "GET /careers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63294 - "GET /dashboard/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58342 - "GET /careers HTTP/1.1" 200 OK
